@@ -15,13 +15,12 @@ type GoFile struct {
 }
 
 type Installable struct {
-	Name   string
-	URI    string
-	author string
+	Name, URI    string
+	author, host string
 }
 
-func New(installables ...Installable) *GoFile {
-	return &GoFile{Installables: installables}
+func New(installables ...Installable) (f *GoFile, err error) {
+	return &GoFile{Installables: installables}, nil
 }
 
 func NewFromFile(file *os.File) (f *GoFile, err error) {
@@ -44,7 +43,7 @@ func NewFromFile(file *os.File) (f *GoFile, err error) {
 		installables = append(installables, *i)
 	}
 
-	return &GoFile{Installables: installables}, nil
+	return New(installables...)
 }
 
 func NewInstallable(rawUrl string) (i *Installable, err error) {
@@ -55,8 +54,9 @@ func NewInstallable(rawUrl string) (i *Installable, err error) {
 
 	segments := strings.Split(uri.Path, "/")
 	i = &Installable{
-		author: segments[0],
-		Name:   segments[1],
+		host:   segments[0],
+		author: segments[1],
+		Name:   segments[2],
 		URI:    rawUrl,
 	}
 	return i, err
