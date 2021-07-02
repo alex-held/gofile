@@ -1,9 +1,9 @@
 package cmd
 
-import "C"
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -11,42 +11,82 @@ import (
 	"github.com/alex-held/gofile/internal/gofile"
 )
 
-type ListCommand struct {
-	*kingpin.CmdClause
-	GofilePath *string
-}
-
-type ListCmd struct {
+type InstallCmd struct {
 	File string
+	Dir  string
+	Dry  bool
 	vars struct {
 		filePtr *string
+		dirPtr  *string
+		dryPtr  *bool
 	}
 }
 
-func (cmd *ListCmd) run(ctx *kingpin.ParseContext) (err error) {
+func (cmd *InstallCmd) run(ctx *kingpin.ParseContext) (err error) {
 	f, err := gofile.OpenFromPath(cmd.File)
 	if err != nil {
 		return err
 	}
-	err = f.PrettyPrintW(os.Stderr)
+
+	if cmd.Dir != "" {
+		defaultDir := os.Getenv("GOPATH") + "/bin"
+		cmd.Dir = defaultDir
+	}
+
+	for _, installable := range f.Installables {
+		command := exec.Command("go", "get", installable.URI)
+		command.Env = os.Environ()
+		command.Env = append(command.Env, "GOBIN="+cmd.Dir)
+
+		if cmd.Dry {
+			fmt.Printf("[DRY] would execute '%s'\n", command.String())
+			continue
+		}
+		if err = command.Run(); err != nil {
+			return err
+		}
+
+	}
 	return err
 }
 
-func configureListCommand(app *CLI) {
-	const fileArg = "file"
-	c := &ListCmd{
-		vars: struct{ filePtr *string }{filePtr: new(string)},
+func configureInstallCommand(app *CLI) {
+
+	c := &InstallCmd{
+		vars: struct {
+			filePtr *string
+			dirPtr  *string
+			dryPtr  *bool
+		}{filePtr: new(string), dirPtr: new(string), dryPtr: new(bool)},
 	}
 
-	cmd := app.Command("list", "lists the go binaries of the file")
+	cmd := app.Command("install", "installs the go binaries of the file")
 
-	cmd.Flag(fileArg, "path of the Gofile").
+	cmd.Flag("file", "path of the Gofile").
 		Default("Gofile").
 		Short('f').
 		StringVar(c.vars.filePtr)
 
+	cmd.Flag("dir", "path of the bin dir").
+		Default("").
+		Short('d').
+		StringVar(c.vars.dirPtr)
+
+	cmd.Flag("dry", "enables / disables dry mode").
+		Default("false").
+		Short('n').
+		BoolVar(c.vars.dryPtr)
+
 	cmd.PreAction(func(ctx *kingpin.ParseContext) (err error) {
 		c.File, err = gofile.ResolveGofilePath(*c.vars.filePtr)
+		if err != nil {
+			return err
+		}
+		c.Dir, err = filepath.Abs(*c.vars.dirPtr)
+		if err != nil {
+			return err
+		}
+		c.Dry = *c.vars.dryPtr
 		return err
 	})
 
@@ -72,7 +112,6 @@ func configureListCommand(app *CLI) {
 				}
 				return nil
 			})
-
 		return v.Validate(clause)
 	})
 

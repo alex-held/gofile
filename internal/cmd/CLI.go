@@ -33,6 +33,7 @@ func (cli *CLI) ConfigureGlobals() {
 
 func (cli *CLI) ConfigureCommands() {
 	configureListCommand(cli)
+	configureInstallCommand(cli)
 }
 
 func New() (cli *CLI) {
