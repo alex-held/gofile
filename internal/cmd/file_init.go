@@ -19,11 +19,14 @@ type FileInitCmd struct {
 }
 
 func (cmd *FileInitCmd) run(ctx *kingpin.ParseContext) (err error) {
-	path := path2.Join(cmd.Out, "Gofile")
-	f, err := gofile.New()
+	f, err := gofile.NewFromFile(os.Stdin)
 	if err != nil {
-		return err
+		if f, err = gofile.New(); err != nil {
+			return err
+		}
 	}
+
+	path := path2.Join(cmd.Out, "Gofile")
 	_, err = gofile.SaveFile(path, f)
 	return err
 }
