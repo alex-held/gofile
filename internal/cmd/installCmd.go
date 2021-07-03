@@ -50,8 +50,7 @@ func (cmd *InstallCmd) run(ctx *kingpin.ParseContext) (err error) {
 	return err
 }
 
-func configureInstallCommand(app *CLI) {
-
+func ConfigureInstallCommand(app *CLI) {
 	c := &InstallCmd{
 		vars: struct {
 			filePtr *string

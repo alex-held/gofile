@@ -1,7 +1,5 @@
 package cmd
 
-/*
-import "C"
 import (
 	"fmt"
 	"os"
@@ -12,29 +10,51 @@ import (
 	"github.com/alex-held/gofile/internal/gofile"
 )
 
-type ListCmd struct {
-	File string
-	vars struct {
-		filePtr *string
+type FileListCmd struct {
+	File   string
+	Format string
+	vars   struct {
+		filePtr   *string
+		formatPtr *string
 	}
 }
 
-func (cmd *ListCmd) run(ctx *kingpin.ParseContext) (err error) {
+func (cmd *FileListCmd) run(ctx *kingpin.ParseContext) (err error) {
 	f, err := gofile.OpenFromPath(cmd.File)
 	if err != nil {
 		return err
 	}
-	err = f.TablePrintW(os.Stderr)
+
+	return printWithFormat(cmd.Format, f)
+}
+
+func printWithFormat(format string, f *gofile.GoFile) (err error) {
+	switch format {
+	case "plain":
+		if err = f.PlainPrintW(os.Stdout); err != nil {
+			return err
+		}
+	case "table":
+		if err = f.TablePrintW(os.Stdout); err != nil {
+			return err
+		}
+	}
 	return err
 }
 
-func configureListCommand(app *CLI) {
+func ConfigureFileListCommand(fileCmd *kingpin.CmdClause) {
 	const fileArg = "file"
-	c := &ListCmd{
-		vars: struct{ filePtr *string }{filePtr: new(string)},
+	c := &FileListCmd{
+		vars: struct {
+			filePtr   *string
+			formatPtr *string
+		}{filePtr: new(string), formatPtr: new(string)},
 	}
 
-	cmd := app.Command("list", "lists the go binaries of the file")
+	cmd := fileCmd.Command("list", "lists the go binaries of the file")
+	cmd.Flag("format", "specify the output format").
+		Default("table").
+		EnumVar(c.vars.formatPtr, "plain", "table")
 
 	cmd.Flag(fileArg, "path of the Gofile").
 		Default("Gofile").
@@ -43,6 +63,7 @@ func configureListCommand(app *CLI) {
 
 	cmd.PreAction(func(ctx *kingpin.ParseContext) (err error) {
 		c.File, err = gofile.ResolveGofilePath(*c.vars.filePtr)
+		c.Format = *c.vars.formatPtr
 		return err
 	})
 
@@ -74,5 +95,3 @@ func configureListCommand(app *CLI) {
 
 	cmd.Action(c.run)
 }
-
- */

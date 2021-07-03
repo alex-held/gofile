@@ -27,6 +27,25 @@ func New(installables ...Installable) (f *GoFile, err error) {
 	return &GoFile{Installables: installables}, nil
 }
 
+func SaveFile(path string, file *GoFile) (f *os.File, err error) {
+	buffer := &bytes.Buffer{}
+
+	for _, installable := range file.Installables {
+		if _, err = buffer.WriteString(installable.URI + "\n"); err != nil {
+			return nil, err
+		}
+	}
+
+	f, err = os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		return f, err
+	}
+	defer f.Close()
+
+	_, err = f.Write(buffer.Bytes())
+	return f, err
+}
+
 func ResolveGofilePath(rawPath string) (path string, err error) {
 	abs, err := filepath.Abs(rawPath)
 	if err != nil {
@@ -87,13 +106,30 @@ func NewInstallable(rawUrl string) (i *Installable, err error) {
 	return i, err
 }
 
-func (g GoFile) PrettyPrint() (string, error) {
+func (g GoFile) TablePrint() (string, error) {
 	sb := &strings.Builder{}
-	err := g.PrettyPrintW(sb)
+	err := g.TablePrintW(sb)
 	return sb.String(), err
 }
 
-func (g GoFile) PrettyPrintW(w io.Writer) (err error) {
+func (g GoFile) PlainPrint() (str string, err error) {
+	sb := &strings.Builder{}
+	err = g.PlainPrintW(sb)
+	return sb.String(), err
+}
+
+func (g GoFile) PlainPrintW(w io.Writer) (err error) {
+	buffer := &bytes.Buffer{}
+	for _, installable := range g.Installables {
+		if _, err = buffer.WriteString(installable.URI + "\n"); err != nil {
+			return err
+		}
+	}
+	_, err = buffer.WriteTo(w)
+	return err
+}
+
+func (g GoFile) TablePrintW(w io.Writer) (err error) {
 	buf := &bytes.Buffer{}
 	table := tablewriter.NewWriter(buf)
 

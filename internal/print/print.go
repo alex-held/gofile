@@ -15,10 +15,10 @@ func PrettyPrint(val PrettyPrintable) (s string, err error) {
 }
 
 func PrettyPrintW(val PrettyPrintable, w io.Writer) (err error) {
-	return val.PrettyPrintW(w)
+	return val.TablePrintW(w)
 }
 
 type PrettyPrintable interface {
-	PrettyPrint() (str string, err error)
-	PrettyPrintW(w io.Writer) (err error)
+	TablePrint() (str string, err error)
+	TablePrintW(w io.Writer) (err error)
 }
